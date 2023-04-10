@@ -1,106 +1,88 @@
 package util
 
 import (
-	"fmt"
+	"io"
+	"log"
 	"os"
+	"path"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
-const (
-	// LevelError 错误
-	LevelError = iota
-	// LevelWarning 警告
-	LevelWarning
-	// LevelInformational 提示
-	LevelInformational
-	// LevelDebug 除错
-	LevelDebug
-)
-
-var logger *Logger
-
-// Logger 日志
-type Logger struct {
-	level int
-}
-
-// Println 打印
-func (ll *Logger) Println(msg string) {
-	fmt.Printf("%s %s", time.Now().Format("2006-01-02 15:04:05 -0700"), msg)
-}
-
-// Panic 极端错误
-func (ll *Logger) Panic(format string, v ...interface{}) {
-	if LevelError > ll.level {
-		return
-	}
-	msg := fmt.Sprintf("[Panic] "+format, v...)
-	ll.Println(msg)
-	os.Exit(0)
-}
-
-// Error 错误
-func (ll *Logger) Error(format string, v ...interface{}) {
-	if LevelError > ll.level {
-		return
-	}
-	msg := fmt.Sprintf("[E] "+format, v...)
-	ll.Println(msg)
-}
-
-// Warning 警告
-func (ll *Logger) Warning(format string, v ...interface{}) {
-	if LevelWarning > ll.level {
-		return
-	}
-	msg := fmt.Sprintf("[W] "+format, v...)
-	ll.Println(msg)
-}
-
-// Info 信息
-func (ll *Logger) Info(format string, v ...interface{}) {
-	if LevelInformational > ll.level {
-		return
-	}
-	msg := fmt.Sprintf("[I] "+format, v...)
-	ll.Println(msg)
-}
-
-// Debug 校验
-func (ll *Logger) Debug(format string, v ...interface{}) {
-	if LevelDebug > ll.level {
-		return
-	}
-	msg := fmt.Sprintf("[D] "+format, v...)
-	ll.Println(msg)
-}
+var logger *logrus.Logger
 
 // BuildLogger 构建logger
-func BuildLogger(level string) {
-	intLevel := LevelError
-	switch level {
-	case "error":
-		intLevel = LevelError
-	case "warning":
-		intLevel = LevelWarning
-	case "info":
-		intLevel = LevelInformational
-	case "debug":
-		intLevel = LevelDebug
+func BuildLogger(logLevel logrus.Level) {
+	if logger != nil {
+		src, _ := setOutputFile()
+		//设置输出
+		logger.Out = src
+		return
 	}
-	l := Logger{
-		level: intLevel,
+	//实例化
+	l := logrus.New()
+	writer1_file, _ := setOutputFile() //文件
+	writer2_console := os.Stdout       //终端
+
+	//同时写入终端和文件中
+	l.SetOutput(io.MultiWriter(writer1_file, writer2_console))
+	//设置日志级别
+	l.SetLevel(logLevel)
+	//设置日志格式
+	l.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
+	//增加行号和文件名
+	l.SetReportCaller(true)
+
+	/*
+		加个hook形成ELK体系
+		但是考虑到一些同学一下子接受不了那么多技术栈，
+		所以这里的ELK体系加了注释，如果想引入可以直接注释去掉，
+		如果不想引入这样注释掉也是没问题的。
+	*/
+	//hook := model.EsHookLog()
+	//l.AddHook(hook)
+	logger = l
+
+}
+
+func setOutputFile() (*os.File, error) {
+	now := time.Now()
+	logFilePath := ""
+	if dir, err := os.Getwd(); err == nil {
+		logFilePath = dir + "/logs/"
 	}
-	logger = &l
+	_, err := os.Stat(logFilePath)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(logFilePath, 0777); err != nil {
+			log.Println(err.Error())
+			return nil, err
+		}
+	}
+	logFileName := now.Format("2006-01-02") + ".log"
+	//日志文件
+	fileName := path.Join(logFilePath, logFileName)
+	if _, err := os.Stat(fileName); err != nil {
+		if _, err := os.Create(fileName); err != nil {
+			log.Println(err.Error())
+			return nil, err
+		}
+	}
+	//写入文件
+	src, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return src, nil
 }
 
 // Log 返回日志对象
-func Log() *Logger {
+func Log() *logrus.Logger {
 	if logger == nil {
-		l := Logger{
-			level: LevelDebug,
-		}
-		logger = &l
+		BuildLogger(logrus.DebugLevel)
 	}
 	return logger
 }

@@ -15,7 +15,7 @@ import (
 func Ping(c *gin.Context) {
 	c.JSON(200, serializer.Response{
 		Code: 0,
-		Msg:  "ping",
+		Msg:  "success",
 	})
 }
 
