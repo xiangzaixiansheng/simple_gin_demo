@@ -14,6 +14,7 @@ func NewRouter() *gin.Engine {
 
 	// 中间件, 顺序不能改
 	r.Use(middleware.Session(os.Getenv("SESSION_SECRET")))
+	r.Use(middleware.LoggerMiddleware())
 	r.Use(middleware.Cors())
 	r.Use(middleware.CurrentUser())
 
@@ -22,7 +23,7 @@ func NewRouter() *gin.Engine {
 	{
 		v1.GET("ping", api.Ping)
 
-		// 用户登录
+		// 用户注册
 		v1.POST("user/register", api.UserRegister)
 
 		// 用户登录

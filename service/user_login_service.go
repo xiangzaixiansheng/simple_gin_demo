@@ -3,6 +3,7 @@ package service
 import (
 	"simple_gin_demo/model"
 	"simple_gin_demo/serializer"
+	"simple_gin_demo/util"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -27,7 +28,8 @@ func (service *UserLoginService) Login(c *gin.Context) serializer.Response {
 	var user model.User
 
 	if err := model.DB.Where("user_name = ?", service.UserName).First(&user).Error; err != nil {
-		return serializer.ParamErr("账号或密码错误", nil)
+		util.Log().Error("Login", err)
+		return serializer.ParamErr("账号或密码错误1", nil)
 	}
 
 	if user.CheckPassword(service.Password) == false {
