@@ -18,10 +18,26 @@ https://www.printlove.cn/tools/sql2gorm
 
 ##### 二、遇到的问题
 
+
+
 问题一：
 
 \"created_at\": unsupported Scan, storing driver.Value type []uint8 into type *time.Time"
 
 在链接数据库的时候
 &parseTime=true
+
+
+
+问题二：设置go env方法
+
+设置go env方法
+
+
+
+go env -w GOARCH="amd64"
+
+go env -w GOOS=darwin
+
+
 
