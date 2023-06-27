@@ -7,34 +7,43 @@ import (
 	"path"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
 
-var logger *logrus.Logger
+var LogrusObj *logrus.Logger
 
-// BuildLogger 构建logger
-func BuildLogger(logLevel logrus.Level) {
-	if logger != nil {
+func init() {
+	// 从本地读取环境变量
+	godotenv.Load()
+
+	// 设置日志级别
+	level, err := logrus.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		level = logrus.DebugLevel
+	}
+
+	if LogrusObj != nil {
 		src, _ := setOutputFile()
 		//设置输出
-		logger.Out = src
+		LogrusObj.Out = src
 		return
 	}
 	//实例化
-	l := logrus.New()
+	logger := logrus.New()
 	writer1_file, _ := setOutputFile() //文件
 	writer2_console := os.Stdout       //终端
 
 	//同时写入终端和文件中
-	l.SetOutput(io.MultiWriter(writer1_file, writer2_console))
+	logger.SetOutput(io.MultiWriter(writer1_file, writer2_console))
 	//设置日志级别
-	l.SetLevel(logLevel)
+	logger.SetLevel(level)
 	//设置日志格式
-	l.SetFormatter(&logrus.JSONFormatter{
+	logger.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
 	//增加行号和文件名
-	l.SetReportCaller(true)
+	logger.SetReportCaller(true)
 
 	/*
 		加个hook形成ELK体系
@@ -43,9 +52,8 @@ func BuildLogger(logLevel logrus.Level) {
 		如果不想引入这样注释掉也是没问题的。
 	*/
 	//hook := model.EsHookLog()
-	//l.AddHook(hook)
-	logger = l
-
+	//logger.AddHook(hook)
+	LogrusObj = logger
 }
 
 func setOutputFile() (*os.File, error) {
@@ -79,10 +87,18 @@ func setOutputFile() (*os.File, error) {
 	return src, nil
 }
 
-// Log 返回日志对象
-func Log() *logrus.Logger {
-	if logger == nil {
-		BuildLogger(logrus.DebugLevel)
-	}
-	return logger
-}
+/*
+    log.Trace("Something very low level.")
+	log.Debug("Useful debugging information.")
+	log.Info("Something noteworthy happened!")
+	log.Warn("You should probably take a look at this.")
+	log.Error("Something failed but I'm not quitting.")
+	// Calls os.Exit(1) after logging
+	//log.Fatal("Bye.")
+	// Calls panic() after logging
+	log.Panic("I'm bailing.")
+
+	log.WithFields(log.Fields{
+		"animal": "dog", //增加字段打印
+	}).Info("dog is here")
+**/

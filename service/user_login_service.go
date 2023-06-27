@@ -28,7 +28,7 @@ func (service *UserLoginService) Login(c *gin.Context) serializer.Response {
 	var user model.User
 
 	if err := model.DB.Where("user_name = ?", service.UserName).First(&user).Error; err != nil {
-		util.Log().Error("Login", err)
+		util.LogrusObj.Error("Login", err)
 		return serializer.ParamErr("账号或密码错误1", nil)
 	}
 

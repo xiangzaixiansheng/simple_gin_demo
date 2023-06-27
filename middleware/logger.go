@@ -29,7 +29,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 		}
 		method := c.Request.Method
 		url := c.Request.RequestURI
-		Log := util.Log().WithFields(logrus.Fields{
+		Log := util.LogrusObj.WithFields(logrus.Fields{
 			"HostName":  hostName,
 			"SpendTime": spendTime,
 			"path":      url,

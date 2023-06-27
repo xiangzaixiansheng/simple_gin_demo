@@ -11,6 +11,6 @@ func main() {
 	conf.Init()
 
 	r := server.NewRouter()
-	util.Log().Info("服务启动%v", 3000)
+	util.LogrusObj.Info("服务启动%v", 3000)
 	r.Run(":3000")
 }
