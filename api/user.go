@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"simple_gin_demo/serializer"
 	"simple_gin_demo/service"
 
@@ -13,9 +14,13 @@ func UserRegister(c *gin.Context) {
 	var service service.UserRegisterService
 	if err := c.ShouldBind(&service); err == nil {
 		res := service.Register()
-		c.JSON(200, res)
+		if res.Code != 0 {
+			c.JSON(http.StatusBadRequest, res)
+			return
+		}
+		c.JSON(http.StatusOK, res)
 	} else {
-		c.JSON(200, ErrorResponse(err))
+		c.JSON(http.StatusBadRequest, ErrorResponse(err))
 	}
 }
 
@@ -24,25 +29,42 @@ func UserLogin(c *gin.Context) {
 	var service service.UserLoginService
 	if err := c.ShouldBind(&service); err == nil {
 		res := service.Login(c)
-		c.JSON(200, res)
+		if res.Code != 0 {
+			c.JSON(http.StatusUnauthorized, res)
+			return
+		}
+		c.JSON(http.StatusOK, res)
 	} else {
-		c.JSON(200, ErrorResponse(err))
+		c.JSON(http.StatusBadRequest, ErrorResponse(err))
 	}
 }
 
 // UserMe 用户详情
 func UserMe(c *gin.Context) {
 	user := CurrentUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, serializer.Response{
+			Code: 40001,
+			Msg:  "用户未登录",
+		})
+		return
+	}
 	res := serializer.BuildUserResponse(*user)
-	c.JSON(200, res)
+	c.JSON(http.StatusOK, res)
 }
 
 // UserLogout 用户登出
 func UserLogout(c *gin.Context) {
 	s := sessions.Default(c)
 	s.Clear()
-	s.Save()
-	c.JSON(200, serializer.Response{
+	if err := s.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, serializer.Response{
+			Code: 50001,
+			Msg:  "登出失败",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, serializer.Response{
 		Code: 0,
 		Msg:  "登出成功",
 	})

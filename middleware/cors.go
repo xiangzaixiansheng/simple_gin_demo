@@ -1,7 +1,10 @@
 package middleware
 
 import (
+	"os"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -9,24 +12,54 @@ import (
 
 // Cors 跨域配置
 func Cors() gin.HandlerFunc {
-	config := cors.DefaultConfig()
-	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Cookie"}
+	config := cors.Config{
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Length",
+			"Content-Type",
+			"Authorization",
+			"Accept",
+			"X-Requested-With",
+			"Cookie",
+		},
+		ExposeHeaders: []string{
+			"Content-Length",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Allow-Headers",
+		},
+		MaxAge: 12 * time.Hour,
+	}
+
 	if gin.Mode() == gin.ReleaseMode {
-		// 生产环境需要配置跨域域名，否则403
-		config.AllowOrigins = []string{"http://www.example.com"}
+		// 生产环境从环境变量读取允许的域名
+		allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+		if allowedOrigins != "" {
+			config.AllowOrigins = strings.Split(allowedOrigins, ",")
+		} else {
+			// 默认生产环境域名
+			config.AllowOrigins = []string{"https://www.example.com"}
+		}
 	} else {
-		// 测试环境下模糊匹配本地开头的请求
+		// 开发环境允许本地域名
 		config.AllowOriginFunc = func(origin string) bool {
-			if regexp.MustCompile(`^http://127\.0\.0\.1:\d+$`).MatchString(origin) {
+			// 允许本地开发域名
+			if regexp.MustCompile(`^https?://127\.0\.0\.1(:\d+)?$`).MatchString(origin) {
 				return true
 			}
-			if regexp.MustCompile(`^http://localhost:\d+$`).MatchString(origin) {
+			if regexp.MustCompile(`^https?://localhost(:\d+)?$`).MatchString(origin) {
+				return true
+			}
+			// 允许开发环境域名
+			if regexp.MustCompile(`^https?://[a-zA-Z0-9-]+\.local(:\d+)?$`).MatchString(origin) {
 				return true
 			}
 			return false
 		}
 	}
+
+	// 允许携带认证信息
 	config.AllowCredentials = true
+
 	return cors.New(config)
 }
